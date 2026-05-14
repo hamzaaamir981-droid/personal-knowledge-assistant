@@ -1,0 +1,18 @@
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# ChromaDB local database
+chroma_db/
+
+# Streamlit config/cache
+.streamlit/
+
+# Local uploaded documents
+data/
+
+# Environment files
+.env
