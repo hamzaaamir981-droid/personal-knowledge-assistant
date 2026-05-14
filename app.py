@@ -149,7 +149,7 @@ def ask_ollama(prompt):
                 "prompt": prompt,
                 "stream": False
             },
-            timeout=120
+            timeout=500
         )
 
         response.raise_for_status()
@@ -342,6 +342,13 @@ Detailed summary:
                 "Copy-friendly summary:",
                 value=summary,
                 height=300
+            )
+
+            st.download_button(
+                label="Download Summary as TXT",
+                data=summary,
+                file_name=f"{selected_document}_summary.txt",
+                mime="text/plain"
             )
 
             st.divider()
