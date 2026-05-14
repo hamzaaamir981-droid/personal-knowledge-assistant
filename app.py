@@ -141,14 +141,33 @@ total_chunks = len(collection_data["ids"])
 # -----------------------------
 
 def ask_ollama(prompt):
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": "llama3:8b",
-            "prompt": prompt,
-            "stream": False
-        }
-    )
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "llama3:8b",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=120
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+        return data.get("response", "No response received from Ollama.")
+
+    except requests.exceptions.ConnectionError:
+        return "Ollama is not running. Please start Ollama and try again."
+
+    except requests.exceptions.Timeout:
+        return "Ollama took too long to respond. Try again with a shorter question or smaller document."
+
+    except requests.exceptions.RequestException as e:
+        return f"Ollama request failed: {e}"
+
+    except Exception as e:
+        return f"Unexpected error: {e}"
 
     data = response.json()
     return data["response"]
