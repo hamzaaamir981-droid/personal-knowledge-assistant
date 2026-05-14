@@ -6,10 +6,20 @@ import sys
 from pathlib import Path
 
 
-st.set_page_config(page_title="Personal Knowledge Assistant")
+# -----------------------------
+# Page setup
+# -----------------------------
 
-st.title("Personal Knowledge Assistant")
-st.write("Ask questions from your stored documents or generate detailed summaries.")
+st.set_page_config(
+    page_title="Personal Knowledge Assistant",
+    page_icon="📚",
+    layout="wide"
+)
+
+st.title("📚 Personal Knowledge Assistant")
+st.write(
+    "Upload documents, ask questions, and generate summaries using a local RAG pipeline."
+)
 
 
 data_folder = Path("data")
@@ -17,81 +27,75 @@ data_folder.mkdir(exist_ok=True)
 
 
 # -----------------------------
-# Upload section
+# Sidebar: Upload + Manage + Rebuild
 # -----------------------------
 
-uploaded_file = st.file_uploader(
-    "Upload a PDF or TXT file",
-    type=["pdf", "txt"]
-)
+with st.sidebar:
+    st.header("Document Controls")
 
-if uploaded_file is not None:
-    file_path = data_folder / uploaded_file.name
-
-    with open(file_path, "wb") as file:
-        file.write(uploaded_file.getbuffer())
-
-    st.success(f"Uploaded: {uploaded_file.name}")
-    st.info("Click Rebuild Knowledge Base to make this file searchable.")
-
-
-# -----------------------------
-# Document management section
-# -----------------------------
-
-st.divider()
-st.subheader("Manage Documents")
-
-files_in_data = [
-    file.name
-    for file in data_folder.iterdir()
-    if file.suffix.lower() in [".pdf", ".txt"]
-]
-
-if files_in_data:
-    st.write("Files in data folder:")
-
-    for file_name in files_in_data:
-        st.write(f"- {file_name}")
-
-    file_to_delete = st.selectbox(
-        "Choose a file to delete:",
-        files_in_data
+    uploaded_file = st.file_uploader(
+        "Upload PDF or TXT",
+        type=["pdf", "txt"]
     )
 
-    if st.button("Delete Selected File"):
-        file_path = data_folder / file_to_delete
+    if uploaded_file is not None:
+        file_path = data_folder / uploaded_file.name
 
-        if file_path.exists():
-            file_path.unlink()
-            st.success(f"Deleted: {file_to_delete}")
-            st.warning("Now click Rebuild Knowledge Base to update the searchable database.")
-        else:
-            st.error("File not found.")
-else:
-    st.info("No PDF/TXT files found in the data folder.")
+        with open(file_path, "wb") as file:
+            file.write(uploaded_file.getbuffer())
 
+        st.success(f"Uploaded: {uploaded_file.name}")
+        st.info("Click Rebuild Knowledge Base to make it searchable.")
 
-# -----------------------------
-# Rebuild knowledge base
-# -----------------------------
+    st.divider()
 
-st.divider()
+    st.subheader("Manage Documents")
 
-if st.button("Rebuild Knowledge Base"):
-    with st.spinner("Rebuilding knowledge base..."):
-        result = subprocess.run(
-            [sys.executable, "ingest.py"],
-            capture_output=True,
-            text=True
+    files_in_data = [
+        file.name
+        for file in data_folder.iterdir()
+        if file.suffix.lower() in [".pdf", ".txt"]
+    ]
+
+    if files_in_data:
+        st.write("Files in data folder:")
+
+        for file_name in files_in_data:
+            st.write(f"- {file_name}")
+
+        file_to_delete = st.selectbox(
+            "Choose file to delete:",
+            files_in_data
         )
 
-    if result.returncode == 0:
-        st.success("Knowledge base rebuilt successfully.")
-        st.code(result.stdout)
+        if st.button("Delete Selected File"):
+            file_path = data_folder / file_to_delete
+
+            if file_path.exists():
+                file_path.unlink()
+                st.success(f"Deleted: {file_to_delete}")
+                st.warning("Click Rebuild Knowledge Base to update the index.")
+            else:
+                st.error("File not found.")
     else:
-        st.error("Failed to rebuild knowledge base.")
-        st.code(result.stderr)
+        st.info("No PDF/TXT files found.")
+
+    st.divider()
+
+    if st.button("Rebuild Knowledge Base"):
+        with st.spinner("Rebuilding knowledge base..."):
+            result = subprocess.run(
+                [sys.executable, "ingest.py"],
+                capture_output=True,
+                text=True
+            )
+
+        if result.returncode == 0:
+            st.success("Knowledge base rebuilt.")
+            st.code(result.stdout)
+        else:
+            st.error("Failed to rebuild knowledge base.")
+            st.code(result.stderr)
 
 
 # -----------------------------
@@ -105,7 +109,9 @@ try:
         name="knowledge_base"
     )
 except Exception:
-    st.warning("No knowledge base found. Upload a PDF/TXT file and click Rebuild Knowledge Base.")
+    st.warning(
+        "No knowledge base found. Upload a PDF/TXT file from the sidebar and click Rebuild Knowledge Base."
+    )
     st.stop()
 
 
@@ -121,30 +127,13 @@ for metadata in collection_data["metadatas"]:
 
 
 if not documents_in_data:
-    st.warning("No indexed documents found. Upload a PDF/TXT file and rebuild the knowledge base.")
+    st.warning(
+        "No indexed documents found. Upload a PDF/TXT file and rebuild the knowledge base."
+    )
     st.stop()
 
 
 total_chunks = len(collection_data["ids"])
-
-st.info(f"Indexed documents: {len(documents_in_data)} | Indexed chunks: {total_chunks}")
-
-
-selected_document = st.selectbox(
-    "Choose a document:",
-    documents_in_data
-)
-
-st.caption(f"Currently using: {selected_document}")
-
-
-task_mode = st.selectbox(
-    "Choose task:",
-    [
-        "Ask a question",
-        "Summarize selected document"
-    ]
-)
 
 
 # -----------------------------
@@ -177,12 +166,42 @@ def build_source_label(metadata):
 
 
 # -----------------------------
+# Main layout
+# -----------------------------
+
+st.info(f"Indexed documents: {len(documents_in_data)} | Indexed chunks: {total_chunks}")
+
+left_col, right_col = st.columns([1, 1])
+
+with left_col:
+    selected_document = st.selectbox(
+        "Choose a document:",
+        documents_in_data
+    )
+
+with right_col:
+    task_mode = st.selectbox(
+        "Choose task:",
+        [
+            "Ask a question",
+            "Summarize selected document"
+        ]
+    )
+
+st.caption(f"Currently using: {selected_document}")
+
+st.divider()
+
+
+# -----------------------------
 # Ask question mode
 # -----------------------------
 
 if task_mode == "Ask a question":
+    st.subheader("Ask a Question")
+
     with st.form("question_form"):
-        question = st.text_input("Ask a question:")
+        question = st.text_input("Enter your question:")
         submitted = st.form_submit_button("Ask")
 
     if submitted:
@@ -251,7 +270,8 @@ Answer:
 # -----------------------------
 
 elif task_mode == "Summarize selected document":
-    st.write("Generate a detailed summary of the selected document.")
+    st.subheader("Detailed Summary")
+    st.write("Generate a detailed summary using all chunks from the selected document.")
 
     if st.button("Generate Detailed Summary"):
         document_data = collection.get(
